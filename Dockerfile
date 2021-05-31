@@ -4,7 +4,9 @@ WORKDIR /membership
 COPY . .
 
 ARG GIT_COMMIT="test"
+RUN go get -u github.com/go-swagger/go-swagger/cmd/swagger
 RUN go mod vendor
+RUN swagger generate spec -o ./docs/swaggerui/swagger.json --scan-models
 RUN go build -o server -ldflags "-X memberserver/api.GitCommit=$GIT_COMMIT"
 
 # create a file named Dockerfile
