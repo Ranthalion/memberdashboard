@@ -8,8 +8,30 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+//TODO: [ML] Redesign to throttle emails and only expose methods through a management struct?
+type Communication string
+
+const (
+	AccessRevokedMember         Communication = "AccessRevokedMember"
+	AccessRevokedLeadership     Communication = "AccessRevokedLeadership"
+	IpChanged                   Communication = "IpChanged"
+	PendingRevokationLeadership Communication = "PendingRevokationLeadership"
+	PendingRevokationMember     Communication = "PendingRevokationMember"
+	Welcome                     Communication = "Welcome"
+)
+
+func sendCommunication(communication Communication, recipient string, model interface{}) {
+	//TODO: [ML] Add subject and template path to DB configuration?
+	//Load communication settings, or get them from cache
+	//Check if last communication to recipient is within threshold.  If so, abort.
+	//Send communication
+	//Log that communication was sent
+}
+
 func SendGracePeriodMessageToLeadership(recipient string, member interface{}) {
 	infoAddress := "info@hackrva.org"
+	sendCommunication(PendingRevokationLeadership, infoAddress, member)
+
 	SendTemplatedEmail("pending_revokation_leadership.html.tmpl", infoAddress, "hackRVA Grace Period", member)
 }
 

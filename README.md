@@ -23,6 +23,9 @@ That's it! Nothing else needs to be installed.
 
 Either open the folder in VS Code and choose reopen in container or run the Remote-Containers: Open Folder in Container... command and select the local folder.
 
+![Open from container](openFromContainer.gif "Open from container")
+
+
 The backend server can be started by debugging in VS Code. Otherwise, you can start the server without debugging using `sh buildandrun.sh`.
 
 Start the react app as described in the [UI README](/ui/README.md).
