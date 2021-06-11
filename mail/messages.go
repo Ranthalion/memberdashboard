@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"html/template"
 	"memberserver/config"
+	"memberserver/database"
 
 	log "github.com/sirupsen/logrus"
 )
 
 //TODO: [ML] Redesign to throttle emails and only expose methods through a management struct?
+//maybe a mailer struct
+
 type Communication string
 
 const (
@@ -20,7 +23,23 @@ const (
 	Welcome                     Communication = "Welcome"
 )
 
-func sendCommunication(communication Communication, recipient string, model interface{}) {
+type mailer struct {
+	db     *database.Database
+	m      MailApi
+	config config.Config
+}
+
+type MailApi interface {
+	SendHtmlMail(address, subject, body string) (string, error)
+	SendPlainTextMail(address, subject, content string) (string, error)
+}
+
+func NewMailer(db *database.Database, m MailApi, config config.Config) *mailer {
+	return &mailer{db, m, config}
+}
+
+func (m *mailer) SendCommunication(communication Communication, recipient string, model interface{}) (bool, error) {
+
 	//TODO: [ML] Add subject and template path to DB configuration?
 	//Load communication settings, or get them from cache
 	//Check if last communication to recipient is within threshold.  If so, abort.

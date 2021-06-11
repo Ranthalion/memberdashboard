@@ -1,8 +1,10 @@
 CREATE TABLE IF NOT EXISTS membership.communication
 (
     id SERIAL PRIMARY KEY,
-    title text NOT NULL,
-    frequency_throttle numeric NOT NULL CHECK (frequency_throttle >= 0)
+    name text NOT NULL UNIQUE,
+    subject text NOT NULL,
+    frequency_throttle numeric NOT NULL CHECK (frequency_throttle >= 0),
+    template text NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS membership.communication_log
@@ -13,11 +15,11 @@ CREATE TABLE IF NOT EXISTS membership.communication_log
 );
 
 INSERT INTO membership.communication
-    (title, frequency_throttle)
+    (name, subject, frequency_throttle, template)
 VALUES
-    ('access_revoked_leadership', 0),
-    ('access_revoked', 59),
-    ('ip_changed', 0),
-    ('pending_revokation_leadership', 0),
-    ('pending_revokation_member', 10),
-    ('welcome', 60);
+    ('access_revoked_leadership', 'Membership Expired', 0, 'access_revoked_leadership.html.tmpl'),
+    ('access_revoked', 'Membership Expired', 59, 'access_revoked.html.tmpl'),
+    ('ip_changed', 'IP Address Changed', 0, 'ip_changed.html.tmpl'),
+    ('pending_revokation_leadership', 'hackRVA Grace Period',  0, 'pending_revokation_leadership.html.tmpl'),
+    ('pending_revokation_member', 'hackRVA Grace Period', 10, 'pending_revokation_member.html.tmpl'),
+    ('welcome', 'Welcome to HackRVA', 60, 'welcome.html.tmpl');
