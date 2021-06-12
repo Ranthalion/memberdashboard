@@ -3,10 +3,10 @@ package mail
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"html/template"
 	"memberserver/config"
 	"memberserver/database"
+	"time"
 
 	"github.com/jackc/pgx/v4"
 	log "github.com/sirupsen/logrus"
@@ -47,25 +47,59 @@ func NewMailer(db *database.Database, m MailApi, config config.Config) *mailer {
 }
 
 func (m *mailer) SendCommunication(communication CommunicationTemplate, recipient string, model interface{}) (bool, error) {
-	c := m.db.GetCommunication(communication.String())
+	c, err := m.db.GetCommunication(communication.String())
+	if err != nil {
+		log.Printf("%v not found", communication.String())
+		return false, err
+	}
+
+	memberExists := true
+	member, err := m.db.GetMemberByEmail(recipient)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			memberExists = false
+		} else {
+			return false, err
+		}
+
+	}
+
+	if memberExists && m.isThrottled(c, member) {
+		log.Printf("Communication %v not sent to %v due to throttling", communication.String(), recipient)
+		return false, nil
+	}
+
+	content, err := generateEmailContent("./templates/"+c.Template, model)
+	if err != nil {
+		log.Errorf("Error generating email content. Error: %v", err)
+		return false, err
+	}
+
+	_, err = m.m.SendHtmlMail(recipient, c.Subject, content)
+	if err != nil {
+		return false, err
+	}
+
+	if memberExists {
+		m.db.LogCommunication(c.ID, member.ID)
+	}
+
+	return true, nil
+}
+
+func (m *mailer) isThrottled(c database.Communication, member database.Member) bool {
 
 	if c.FrequencyThrottle > 0 {
-
-		_, err := m.db.GetMemberByEmail(recipient)
-		if errors.Is(err, pgx.ErrNoRows) {
-			fmt.Println("err")
+		last, err := m.db.GetMostRecentCommunicationToMember(member.ID, c.ID)
+		if err != nil {
+			return false
 		}
-		//mostRecentCommunciationToRecipient := m.db.GetMostRecentCommunicationToRecipient(member, c)
-
-		return true, nil
+		difference := time.Since(last).Hours() / 24
+		if difference < float64(c.FrequencyThrottle) {
+			return true
+		}
 	}
-	return false, nil
-
-	//TODO: [ML] Add subject and template path to DB configuration?
-	//Load communication settings, or get them from cache
-	//Check if last communication to recipient is within threshold.  If so, abort.
-	//Send communication
-	//Log that communication was sent
+	return false
 }
 
 func SendGracePeriodMessageToLeadership(recipient string, member interface{}) {
