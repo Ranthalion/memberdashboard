@@ -3,9 +3,9 @@ package mail
 import (
 	"bytes"
 	"errors"
-	"html/template"
 	"memberserver/config"
 	"memberserver/database"
+	"text/template"
 	"time"
 
 	"github.com/jackc/pgx/v4"
@@ -47,11 +47,6 @@ func NewMailer(db *database.Database, m MailApi, config config.Config) *mailer {
 }
 
 func (m *mailer) SendCommunication(communication CommunicationTemplate, recipient string, model interface{}) (bool, error) {
-	c, err := m.db.GetCommunication(communication.String())
-	if err != nil {
-		log.Printf("%v not found", communication.String())
-		return false, err
-	}
 
 	memberExists := true
 	member, err := m.db.GetMemberByEmail(recipient)
@@ -61,7 +56,12 @@ func (m *mailer) SendCommunication(communication CommunicationTemplate, recipien
 		} else {
 			return false, err
 		}
+	}
 
+	c, err := m.db.GetCommunication(communication.String())
+	if err != nil {
+		log.Printf("%v not found. Err: %v", communication.String(), err)
+		return false, err
 	}
 
 	if memberExists && m.isThrottled(c, member) {
@@ -102,6 +102,23 @@ func (m *mailer) isThrottled(c database.Communication, member database.Member) b
 	return false
 }
 
+func generateEmailContent(templatePath string, model interface{}) (string, error) {
+	tmpl, err := template.ParseFiles(templatePath)
+	if err != nil {
+		log.Errorf("Error loading template %v", err)
+		return "", err
+	}
+	tmpl.Option("missingkey=error")
+	var tpl bytes.Buffer
+	err = tmpl.Execute(&tpl, model)
+	if err != nil {
+		log.Errorf("Error generating content %v", err)
+		return "", err
+	}
+	return tpl.String(), nil
+}
+
+/*
 func SendGracePeriodMessageToLeadership(recipient string, member interface{}) {
 	infoAddress := "info@hackrva.org"
 	//sendCommunication(PendingRevokationLeadership, infoAddress, member)
@@ -135,22 +152,6 @@ func SendIPHasChanged(newIpAddress string) {
 	SendTemplatedEmail("ip_changed.html.tmpl", recipient, "IP Address Changed", ipModel)
 }
 
-func generateEmailContent(templatePath string, model interface{}) (string, error) {
-	tmpl, err := template.ParseFiles(templatePath)
-	if err != nil {
-		log.Errorf("Error loading template %v", err)
-		return "", err
-	}
-	tmpl.Option("missingkey=error")
-	var tpl bytes.Buffer
-	err = tmpl.Execute(&tpl, model)
-	if err != nil {
-		log.Errorf("Error generating content %v", err)
-		return "", err
-	}
-	return tpl.String(), nil
-}
-
 func SendTemplatedEmail(templateName string, to string, subject string, model interface{}) {
 	conf, _ := config.Load()
 
@@ -180,3 +181,4 @@ func SendTemplatedEmail(templateName string, to string, subject string, model in
 		log.Errorf("Error sending mail %v", err)
 	}
 }
+*/

@@ -21,6 +21,8 @@ Install the following
 
 That's it! Nothing else needs to be installed.  
 
+If you are on Windows, then it is recommended to clone to the repo to a folder on the WSL for best performance.  
+
 Either open the folder in VS Code and choose reopen in container or run the Remote-Containers: Open Folder in Container... command and select the local folder.
 
 ![Open from container](openFromContainer.gif "Open from container")

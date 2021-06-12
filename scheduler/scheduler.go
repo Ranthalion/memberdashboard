@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"io/ioutil"
+	"memberserver/config"
 	"memberserver/database"
 	"memberserver/mail"
 	"memberserver/payments"
@@ -27,10 +28,16 @@ const resourceUpdateInterval = 4
 // checkIPInterval - check the IP Address daily
 const checkIPInterval = 24
 
+var c config.Config
+var mailApi mail.MailApi
+
 // Setup Scheduler
 //  We want certain tasks to happen on a regular basis
 //  The scheduler will make sure that happens
-func Setup() {
+func Setup(d *database.Database) {
+	mailApi, _ = mail.Setup()
+	c, _ = config.Load()
+
 	scheduleTask(checkPaymentsInterval*time.Hour, payments.GetPayments, payments.GetPayments)
 	scheduleTask(evaluateMemberStatusInterval*time.Hour, checkMemberStatus, checkMemberStatus)
 	scheduleTask(resourceStatusCheckInterval*time.Hour, checkResourceInit, checkResourceTick)
@@ -150,5 +157,18 @@ func checkIPAddressTick() {
 	if string(b) == "" {
 		return
 	}
-	mail.SendIPHasChanged(ip)
+	//TODO: [ML] Figure out why I have to set up a new database when used in a goroutine
+	db, err := database.Setup()
+	if err != nil {
+		log.Printf("Err: %v")
+	}
+
+	ipModel := struct {
+		IpAddress string
+	}{
+		IpAddress: ip,
+	}
+
+	mailer := mail.NewMailer(db, mailApi, c)
+	mailer.SendCommunication(mail.IpChanged, c.AdminEmail, ipModel)
 }
