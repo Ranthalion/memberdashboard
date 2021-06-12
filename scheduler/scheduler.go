@@ -28,6 +28,7 @@ const resourceUpdateInterval = 4
 // checkIPInterval - check the IP Address daily
 const checkIPInterval = 24
 
+var db *database.Database
 var c config.Config
 var mailApi mail.MailApi
 
@@ -37,6 +38,7 @@ var mailApi mail.MailApi
 func Setup(d *database.Database) {
 	mailApi, _ = mail.Setup()
 	c, _ = config.Load()
+	db = d
 
 	scheduleTask(checkPaymentsInterval*time.Hour, payments.GetPayments, payments.GetPayments)
 	scheduleTask(evaluateMemberStatusInterval*time.Hour, checkMemberStatus, checkMemberStatus)
@@ -156,11 +158,6 @@ func checkIPAddressTick() {
 	//   but set the ip address
 	if string(b) == "" {
 		return
-	}
-	//TODO: [ML] Figure out why I have to set up a new database when used in a goroutine
-	db, err := database.Setup()
-	if err != nil {
-		log.Printf("Err: %v")
 	}
 
 	ipModel := struct {
