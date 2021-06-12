@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS membership.communication_log
     id BIGSERIAL PRIMARY KEY,
     member_id uuid NOT NULL REFERENCES membership.members(id),
     communication_id integer NOT NULL REFERENCES membership.communication(id)
+    created_at timestamp NOT NULL DEFAULT NOW()
 );
 
 INSERT INTO membership.communication

@@ -2,26 +2,34 @@ package mail
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"html/template"
 	"memberserver/config"
 	"memberserver/database"
 
+	"github.com/jackc/pgx/v4"
 	log "github.com/sirupsen/logrus"
 )
 
 //TODO: [ML] Redesign to throttle emails and only expose methods through a management struct?
 //maybe a mailer struct
 
-type Communication string
+type CommunicationTemplate string
 
 const (
-	AccessRevokedMember         Communication = "AccessRevokedMember"
-	AccessRevokedLeadership     Communication = "AccessRevokedLeadership"
-	IpChanged                   Communication = "IpChanged"
-	PendingRevokationLeadership Communication = "PendingRevokationLeadership"
-	PendingRevokationMember     Communication = "PendingRevokationMember"
-	Welcome                     Communication = "Welcome"
+	AccessRevokedMember         CommunicationTemplate = "AccessRevokedMember"
+	AccessRevokedLeadership     CommunicationTemplate = "AccessRevokedLeadership"
+	IpChanged                   CommunicationTemplate = "IpChanged"
+	PendingRevokationLeadership CommunicationTemplate = "PendingRevokationLeadership"
+	PendingRevokationMember     CommunicationTemplate = "PendingRevokationMember"
+	Welcome                     CommunicationTemplate = "Welcome"
 )
+
+// String converts CommunicationTemplate to a string
+func (c CommunicationTemplate) String() string {
+	return string(c)
+}
 
 type mailer struct {
 	db     *database.Database
@@ -38,7 +46,20 @@ func NewMailer(db *database.Database, m MailApi, config config.Config) *mailer {
 	return &mailer{db, m, config}
 }
 
-func (m *mailer) SendCommunication(communication Communication, recipient string, model interface{}) (bool, error) {
+func (m *mailer) SendCommunication(communication CommunicationTemplate, recipient string, model interface{}) (bool, error) {
+	c := m.db.GetCommunication(communication.String())
+
+	if c.FrequencyThrottle > 0 {
+
+		_, err := m.db.GetMemberByEmail(recipient)
+		if errors.Is(err, pgx.ErrNoRows) {
+			fmt.Println("err")
+		}
+		//mostRecentCommunciationToRecipient := m.db.GetMostRecentCommunicationToRecipient(member, c)
+
+		return true, nil
+	}
+	return false, nil
 
 	//TODO: [ML] Add subject and template path to DB configuration?
 	//Load communication settings, or get them from cache
@@ -49,7 +70,7 @@ func (m *mailer) SendCommunication(communication Communication, recipient string
 
 func SendGracePeriodMessageToLeadership(recipient string, member interface{}) {
 	infoAddress := "info@hackrva.org"
-	sendCommunication(PendingRevokationLeadership, infoAddress, member)
+	//sendCommunication(PendingRevokationLeadership, infoAddress, member)
 
 	SendTemplatedEmail("pending_revokation_leadership.html.tmpl", infoAddress, "hackRVA Grace Period", member)
 }
@@ -120,7 +141,7 @@ func SendTemplatedEmail(templateName string, to string, subject string, model in
 		return
 	}
 
-	_, err = mp.SendComplexMessage(to, subject, content)
+	_, err = mp.SendHtmlMail(to, subject, content)
 	if err != nil {
 		log.Errorf("Error sending mail %v", err)
 	}

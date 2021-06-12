@@ -7,3 +7,4 @@ passwordfile
 memberserver.local.env
 .public_ip_address
 __debug_bin
+memberserver

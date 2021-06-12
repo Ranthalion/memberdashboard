@@ -3,7 +3,8 @@ package database
 import (
 	"context"
 	"fmt"
-	"memberserver/mail"
+
+	//"memberserver/mail"
 	"strings"
 	"time"
 
@@ -169,7 +170,7 @@ func (db *Database) EvaluateMemberStatus(memberID string) error {
 			log.Debugf("Member is already inactive: %s", m.Name)
 			return nil
 		}
-		mail.SendRevokedEmail(m.Email, m)
+		//mail.SendRevokedEmail(m.Email, m)
 
 		rows, err := db.getConn().Query(context.Background(), paymentDbMethod.updateMembershipLevel(), memberID, Inactive)
 		if err != nil {
